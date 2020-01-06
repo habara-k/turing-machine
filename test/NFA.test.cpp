@@ -24,6 +24,14 @@ void test_nfa1() {
     assert(nfa.run(vector<int>{1,0}) == false);
     assert(nfa.run(vector<int>{0,1,0,1}) == true);
     assert(nfa.run(vector<int>{}) == true);
+
+    auto dfa = nfa.convert();
+
+    assert(dfa.run(vector<int>{0,1,1}) == true);
+    assert(dfa.run(vector<int>{1,0,0}) == true);
+    assert(dfa.run(vector<int>{1,0}) == false);
+    assert(dfa.run(vector<int>{0,1,0,1}) == true);
+    assert(dfa.run(vector<int>{}) == true);
 }
 
 void test_nfa2() {

@@ -30,27 +30,26 @@ struct NFA {
            accept_states(accept_states),
            epsilon(epsilon) {}
 
+    void epsilon_transition(t_states& cur_states) {
+        while (true) {
+            t_states next_states = cur_states;
+            for (const t_state& state : cur_states) {
+                for (const t_state& nxt :
+                        transision[make_pair(state, epsilon)]) {
+                    next_states.insert(nxt);
+                }
+            }
+            if (next_states.size() == cur_states.size()) break;
+            swap(next_states, cur_states);
+        }
+    }
+
     template<typename t_input = vector<t_symbol>>
     bool run(const t_input& input) {
         t_states cur_states{ start_state };
 
-        // epsilon 遷移
-        auto epsilon_transition = [&]() {
-            while (true) {
-                t_states next_states = cur_states;
-                for (const t_state& state : cur_states) {
-                    for (const t_state& nxt :
-                            transision[make_pair(state, epsilon)]) {
-                        next_states.insert(nxt);
-                    }
-                }
-                if (next_states.size() == cur_states.size()) break;
-                swap(next_states, cur_states);
-            }
-        };
-
         for (const t_symbol& symbol : input) {
-            epsilon_transition();
+            epsilon_transition(cur_states);
 
             t_states next_states;
             for (const t_state& state : cur_states) {
@@ -61,7 +60,7 @@ struct NFA {
             }
             swap(next_states, cur_states);
         }
-        epsilon_transition();
+        epsilon_transition(cur_states);
 
         for (const t_state& state : cur_states) {
             if (accept_states.find(state) != accept_states.end()) {
@@ -94,7 +93,15 @@ struct NFA {
             }
         }
 
-        dfa_t_state dfa_start_state = 1<<state_idx[start_state];
+        t_states dfa_start_states{ start_state };
+
+        // epsilon 遷移
+        epsilon_transition(dfa_start_states);
+
+        dfa_t_state dfa_start_state = 0;
+        for (const t_state& state : dfa_start_states) {
+            dfa_start_state |= 1<<state_idx[state];
+        }
 
         map<pair<dfa_t_state,t_symbol>,dfa_t_state> dfa_transisions;
         for (dfa_t_state mask : dfa_states) {
@@ -105,13 +112,16 @@ struct NFA {
                 for (const t_state& state : states) {
                     if ((mask & (1<<state_idx[state])) == 0) continue;
 
-                    for (const t_state& nxt :
-                            transision[make_pair(state, epsilon)]) {
-                        next_states.insert(nxt);
-                    }
-                    for (const t_state& nxt :
-                            transision[make_pair(state, symbol)]) {
-                        next_states.insert(nxt);
+                    t_states cur_states{ state };
+
+                    // epsilon 遷移
+                    epsilon_transition(cur_states);
+
+                    for (const t_state& state : cur_states) {
+                        for (const t_state& nxt :
+                                transision[make_pair(state, symbol)]) {
+                            next_states.insert(nxt);
+                        }
                     }
                 }
 
