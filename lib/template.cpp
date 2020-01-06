@@ -1,3 +1,5 @@
+#ifndef TEMPLATE
+#define TEMPLATE
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -145,3 +147,4 @@ ostream& operator<<(ostream& os, const tuple<Ts...>& t) {
 
 // Debug
 #define DUMP(x) cerr<<#x<<" = "<<(x)<<endl
+#endif

@@ -1,9 +1,10 @@
 #include "template.cpp"
+#include "DFA.cpp"
 
 template<
     typename t_state = int,
-    typename t_states = set<t_state>,
     typename t_symbol = int,
+    typename t_states = set<t_state>,
     typename t_symbols = set<t_symbol>,
     typename t_transision = map<pair<t_state,t_symbol>, t_states>
 >
@@ -29,6 +30,7 @@ struct NFA {
            accept_states(accept_states),
            epsilon(epsilon) {}
 
+    // FIXME: states 名前被り
     template<typename t_input = vector<t_symbol>>
     bool run(const t_input& input) {
         t_states states{ start_state };
@@ -69,42 +71,63 @@ struct NFA {
         }
         return false;
     }
+
+    auto convert() {
+        map<t_state,int> state_idx;
+        for (const t_state& state : states) state_idx[state] = -1;
+        int size = 0;
+        for (auto& p : state_idx) p.second = size++;
+
+        set<int> dfa_states;
+        for (int mask = 0; mask < 1<<size; ++mask) dfa_states.insert(mask);
+
+        set<int> dfa_accept_states;
+        for (int mask : dfa_states) {
+            for (const t_state& state : states) {
+                if ((mask & (1<<state_idx[state])) == 0) continue;
+                if (accept_states.find(state) != accept_states.end()) {
+                    dfa_accept_states.insert(mask);
+                    break;
+                }
+            }
+        }
+
+        int dfa_start_state = 1<<state_idx[start_state];
+
+        map<pair<int,t_symbol>,int> dfa_transisions;
+        for (int mask : dfa_states) {
+            for (const t_symbol& symbol : symbols) {
+
+                t_states next_states;
+
+                for (const t_state& state : states) {
+                    if ((mask & (1<<state_idx[state])) == 0) continue;
+
+                    for (const t_state& nxt :
+                            transision[make_pair(state, epsilon)]) {
+                        next_states.insert(nxt);
+                    }
+                    for (const t_state& nxt :
+                            transision[make_pair(state, symbol)]) {
+                        next_states.insert(nxt);
+                    }
+                }
+
+                int next_mask = 0;
+                for (const t_state& state : next_states) {
+                    next_mask |= 1<<state_idx[state];
+                }
+
+                dfa_transisions[make_pair(mask,symbol)] = next_mask;
+            }
+        }
+
+        return DFA<int,t_symbol>(
+                dfa_states,
+                symbols,
+                dfa_transisions,
+                dfa_start_state,
+                dfa_accept_states
+            );
+    }
 };
-
-
-void test_nfa2() {
-    printf("0 or 1 偶数個 を受理するDFA のテスト\n");
-    NFA<> dfa(
-            set<int>{0,1,2,3,4},
-            set<int>{0,1},
-            map<pair<int,int>,set<int>>{
-                {{0,-1},{1,3}},
-                {{1,0},{2}},
-                {{1,1},{1}},
-                {{2,0},{1}},
-                {{2,1},{2}},
-                {{3,0},{3}},
-                {{3,1},{4}},
-                {{4,0},{4}},
-                {{4,1},{3}}},
-            0,
-            set<int>{1,3},
-            -1);
-
-    assert(dfa.run(vector<int>{0,1,1}) == true);
-    assert(dfa.run(vector<int>{1,0,0}) == true);
-    assert(dfa.run(vector<int>{1,0}) == false);
-    assert(dfa.run(vector<int>{0,1,0,1}) == true);
-    assert(dfa.run(vector<int>{}) == true);
-}
-
-
-int main()
-{
-    cin.tie(0);
-    ios::sync_with_stdio(false);
-
-    test_nfa2();
-
-    return 0;
-}
