@@ -32,7 +32,7 @@ struct NFA {
 
     template<typename t_input = vector<t_symbol>>
     bool run(const t_input& input) {
-        t_states cur_states = start_state;
+        t_states cur_states{ start_state };
 
         // epsilon 遷移
         auto epsilon_transition = [&]() {
@@ -71,17 +71,20 @@ struct NFA {
         return false;
     }
 
+    template<typename dfa_t_state = int>
     auto convert() {
-        map<t_state,int> state_idx;
+        map<t_state,dfa_t_state> state_idx;
         for (const t_state& state : states) state_idx[state] = -1;
-        int size = 0;
+        dfa_t_state size = 0;
         for (auto& p : state_idx) p.second = size++;
 
-        set<int> dfa_states;
-        for (int mask = 0; mask < 1<<size; ++mask) dfa_states.insert(mask);
+        set<dfa_t_state> dfa_states;
+        for (dfa_t_state mask = 0; mask < 1<<size; ++mask) {
+            dfa_states.insert(mask);
+        }
 
-        set<int> dfa_accept_states;
-        for (int mask : dfa_states) {
+        set<dfa_t_state> dfa_accept_states;
+        for (dfa_t_state mask : dfa_states) {
             for (const t_state& state : states) {
                 if ((mask & (1<<state_idx[state])) == 0) continue;
                 if (accept_states.find(state) != accept_states.end()) {
@@ -91,10 +94,10 @@ struct NFA {
             }
         }
 
-        int dfa_start_state = 1<<state_idx[start_state];
+        dfa_t_state dfa_start_state = 1<<state_idx[start_state];
 
-        map<pair<int,t_symbol>,int> dfa_transisions;
-        for (int mask : dfa_states) {
+        map<pair<dfa_t_state,t_symbol>,dfa_t_state> dfa_transisions;
+        for (dfa_t_state mask : dfa_states) {
             for (const t_symbol& symbol : symbols) {
 
                 t_states next_states;
@@ -112,7 +115,7 @@ struct NFA {
                     }
                 }
 
-                int next_mask = 0;
+                dfa_t_state next_mask = 0;
                 for (const t_state& state : next_states) {
                     next_mask |= 1<<state_idx[state];
                 }
@@ -121,7 +124,7 @@ struct NFA {
             }
         }
 
-        return DFA<int,t_symbol>(
+        return DFA<dfa_t_state,t_symbol>(
                 dfa_states,
                 symbols,
                 dfa_transisions,
