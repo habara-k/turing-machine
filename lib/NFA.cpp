@@ -30,23 +30,22 @@ struct NFA {
            accept_states(accept_states),
            epsilon(epsilon) {}
 
-    // FIXME: states 名前被り
     template<typename t_input = vector<t_symbol>>
     bool run(const t_input& input) {
-        t_states states{ start_state };
+        t_states cur_states = start_state;
 
         // epsilon 遷移
         auto epsilon_transition = [&]() {
             while (true) {
-                t_states next_states{ states };
-                for (const t_state& state : states) {
+                t_states next_states = cur_states;
+                for (const t_state& state : cur_states) {
                     for (const t_state& nxt :
                             transision[make_pair(state, epsilon)]) {
                         next_states.insert(nxt);
                     }
                 }
-                if (next_states.size() == states.size()) break;
-                swap(next_states, states);
+                if (next_states.size() == cur_states.size()) break;
+                swap(next_states, cur_states);
             }
         };
 
@@ -54,17 +53,17 @@ struct NFA {
             epsilon_transition();
 
             t_states next_states;
-            for (const t_state& state : states) {
+            for (const t_state& state : cur_states) {
                 for (const t_state& nxt :
                         transision[make_pair(state, symbol)]) {
                     next_states.insert(nxt);
                 }
             }
-            swap(next_states, states);
+            swap(next_states, cur_states);
         }
         epsilon_transition();
 
-        for (const t_state& state : states) {
+        for (const t_state& state : cur_states) {
             if (accept_states.find(state) != accept_states.end()) {
                 return true;
             }
