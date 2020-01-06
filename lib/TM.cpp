@@ -1,5 +1,59 @@
 #include "template.cpp"
 
+template<typename T>
+struct TapeIterator;
+
+template<typename T>
+struct Tape {
+    vector<T> data;
+    const T blank;
+
+    Tape(const initializer_list<T>& data, const T& blank) :
+        data(data), blank(blank) {}
+
+    TapeIterator<T> begin() {
+        return TapeIterator<T>(*this, 0);
+    }
+    TapeIterator<T> end() {
+        return TapeIterator<T>(*this, data.size());
+    }
+};
+
+template<typename T>
+struct TapeIterator {
+    Tape<T>& tape;
+    int idx;
+    TapeIterator(Tape<T>& tape, int idx) :
+        tape(tape), idx(idx) {}
+
+    const T& operator*() const {
+        if (idx == tape.data.size()) {
+            tape.data.push_back(tape.blank);
+        }
+        return tape.data[idx];
+    }
+    T& operator*() {
+        if (idx == tape.data.size()) {
+            tape.data.push_back(tape.blank);
+        }
+        return tape.data[idx];
+    }
+
+    TapeIterator& operator++() {
+        if (++idx > tape.data.size()) {
+            tape.data.push_back(tape.blank);
+        }
+        return *this;
+    }
+    TapeIterator& operator--() {
+        if (--idx < 0) {
+            tape.data.insert(tape.data.begin(), tape.blank);
+            ++idx;
+        }
+        return *this;
+    }
+};
+
 template<
     typename t_state = int,
     typename t_states = set<t_state>,
@@ -31,10 +85,9 @@ struct TM {
            blank(blank),
            accept_states(accept_states) {}
 
-    // TODO: blank をいい感じにしてくれる構造体
-    template<typename t_input = vector<t_symbol>>
+    template<typename t_input>
     bool run(t_input&& input) {
-        auto iterator = input.begin()+1;
+        auto iterator = input.begin();
         t_state state = start_state;
 
         while (transision.count({state, *iterator})) {
@@ -48,7 +101,7 @@ struct TM {
             state = nxt_state;
             *iterator = nxt_symbol;
 
-            direction ? iterator++ : iterator--;
+            direction ? ++iterator : --iterator;
         }
         return accept_states.find(state) != accept_states.end();
     }
@@ -90,18 +143,18 @@ void test_tm1() {
             B,
             set<int>{5});
 
-    assert(tm.run(vector<int>{B,B}) == true);
-    assert(tm.run(vector<int>{B,0,1,0,B}) == true);
-    assert(tm.run(vector<int>{B,0,0,1,1,0,0,B}) == true);
+    assert(tm.run(Tape<int>({},B)) == true);
+    assert(tm.run(Tape<int>({0,1,0},B)) == true);
+    assert(tm.run(Tape<int>({0,0,1,1,0,0},B)) == true);
 
-    assert(tm.run(vector<int>{B,0,1,0,0,B}) == false);
-    assert(tm.run(vector<int>{B,0,1,1,0,B}) == false);
-    assert(tm.run(vector<int>{B,0,0,1,0,B}) == false);
+    assert(tm.run(Tape<int>({0,1,0,0},B)) == false);
+    assert(tm.run(Tape<int>({0,1,1,0},B)) == false);
+    assert(tm.run(Tape<int>({0,0,1,0},B)) == false);
 
-    assert(tm.run(vector<int>{B,0,0,0,B}) == false);
-    assert(tm.run(vector<int>{B,1,1,1,B}) == false);
+    assert(tm.run(Tape<int>({0,0,0},B)) == false);
+    assert(tm.run(Tape<int>({1,1,1},B)) == false);
 
-    assert(tm.run(vector<int>{B,0,1,1,B}) == false);
+    assert(tm.run(Tape<int>({0,1,1},B)) == false);
 }
 
 int main()
